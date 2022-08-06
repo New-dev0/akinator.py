@@ -2,6 +2,7 @@
 A simple example of the Akinator class.
 """
 
+
 import akinator
 
 aki = akinator.Akinator()
@@ -20,7 +21,7 @@ while aki.progression <= 80:
 aki.win()
 
 correct = input(f"It's {aki.first_guess['name']} ({aki.first_guess['description']})! Was I correct?\n{aki.first_guess['absolute_picture_path']}\n\t")
-if correct.lower() == "yes" or correct.lower() == "y":
+if correct.lower() in ["yes", "y"]:
     print("Yay\n")
 else:
     print("Oof\n")
