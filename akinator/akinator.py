@@ -105,11 +105,11 @@ class Akinator():
         """Automatically get the uri and server from akinator.com for the specified language and theme"""
 
         server_regex = re.compile("[{\"translated_theme_name\":\"[\s\S]*\",\"urlWs\":\"https:\\\/\\\/srv[0-9]+\.akinator\.com:[0-9]+\\\/ws\",\"subject_id\":\"[0-9]+\"}]")
-        uri = lang + ".akinator.com"
+        uri = f"{lang}.akinator.com"
 
         bad_list = ["https://srv12.akinator.com:9398/ws"]
         while True:
-            r = requests.get("https://" + uri)
+            r = requests.get(f"https://{uri}")
 
             match = server_regex.search(r.text)
             parsed = json.loads(match.group().split("'arrUrlThemesToPlay', ")[-1])
@@ -169,11 +169,10 @@ class Akinator():
         r = requests.get(NEW_SESSION_URL.format(self.uri, self.timestamp, self.server, str(self.child_mode).lower(), self.uid, self.frontaddr, soft_constraint, self.question_filter), headers=HEADERS)
         resp = self._parse_response(r.text)
 
-        if resp["completion"] == "OK":
-            self._update(resp, True)
-            return self.question
-        else:
+        if resp["completion"] != "OK":
             return raise_connection_error(resp["completion"])
+        self._update(resp, True)
+        return self.question
 
     def answer(self, ans):
         """Answer the current question, which you can find with "Akinator.question". Returns a string containing the next question
@@ -190,11 +189,10 @@ class Akinator():
         r = requests.get(ANSWER_URL.format(self.uri, self.timestamp, self.server, str(self.child_mode).lower(), self.session, self.signature, self.step, ans, self.frontaddr, self.question_filter), headers=HEADERS)
         resp = self._parse_response(r.text)
 
-        if resp["completion"] == "OK":
-            self._update(resp)
-            return self.question
-        else:
+        if resp["completion"] != "OK":
             return raise_connection_error(resp["completion"])
+        self._update(resp)
+        return self.question
 
     def back(self):
         """Goes back to the previous question. Returns a string containing that question
@@ -207,11 +205,10 @@ class Akinator():
         r = requests.get(BACK_URL.format(self.server, self.timestamp, str(self.child_mode).lower(), self.session, self.signature, self.step, self.question_filter), headers=HEADERS)
         resp = self._parse_response(r.text)
 
-        if resp["completion"] == "OK":
-            self._update(resp)
-            return self.question
-        else:
+        if resp["completion"] != "OK":
             return raise_connection_error(resp["completion"])
+        self._update(resp)
+        return self.question
 
     def win(self):
         """Get Aki's guesses for who the person you're thinking of is based on your answers to the questions so far
@@ -225,9 +222,8 @@ class Akinator():
         r = requests.get(WIN_URL.format(self.server, self.timestamp, str(self.child_mode).lower(), self.session, self.signature, self.step), headers=HEADERS)
         resp = self._parse_response(r.text)
 
-        if resp["completion"] == "OK":
-            self.first_guess = resp["parameters"]["elements"][0]["element"]
-            self.guesses = [g["element"] for g in resp["parameters"]["elements"]]
-            return self.first_guess
-        else:
+        if resp["completion"] != "OK":
             return raise_connection_error(resp["completion"])
+        self.first_guess = resp["parameters"]["elements"][0]["element"]
+        self.guesses = [g["element"] for g in resp["parameters"]["elements"]]
+        return self.first_guess

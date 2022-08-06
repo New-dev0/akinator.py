@@ -104,11 +104,11 @@ class Akinator():
 
         server_regex = re.compile(
             "[{\"translated_theme_name\":\"[\s\S]*\",\"urlWs\":\"https:\\\/\\\/srv[0-9]+\.akinator\.com:[0-9]+\\\/ws\",\"subject_id\":\"[0-9]+\"}]")
-        uri = lang + ".akinator.com"
+        uri = f"{lang}.akinator.com"
 
         bad_list = ["https://srv12.akinator.com:9398/ws"]
         while True:
-            async with self.client_session.get("https://" + uri) as w:
+            async with self.client_session.get(f"https://{uri}") as w:
                 match = server_regex.search(await w.text())
 
             parsed = json.loads(match.group().split("'arrUrlThemesToPlay', ")[-1])
@@ -160,11 +160,7 @@ class Akinator():
         """
         self.timestamp = time.time()
 
-        if client_session:
-            self.client_session = client_session
-        else:
-            self.client_session = aiohttp.ClientSession()
-
+        self.client_session = client_session or aiohttp.ClientSession()
         region_info = await self._auto_get_region(get_lang_and_theme(language)["lang"], get_lang_and_theme(language)["theme"])
         self.uri, self.server = region_info["uri"], region_info["server"]
 
@@ -176,11 +172,10 @@ class Akinator():
         async with self.client_session.get(NEW_SESSION_URL.format(self.uri, self.timestamp, self.server, str(self.child_mode).lower(), self.uid, self.frontaddr, soft_constraint, self.question_filter), headers=HEADERS) as w:
             resp = self._parse_response(await w.text())
 
-        if resp["completion"] == "OK":
-            self._update(resp, True)
-            return self.question
-        else:
+        if resp["completion"] != "OK":
             return raise_connection_error(resp["completion"])
+        self._update(resp, True)
+        return self.question
 
     async def answer(self, ans):
         """(coroutine)
@@ -198,11 +193,10 @@ class Akinator():
         async with self.client_session.get(ANSWER_URL.format(self.uri, self.timestamp, self.server, str(self.child_mode).lower(), self.session, self.signature, self.step, ans, self.frontaddr, self.question_filter), headers=HEADERS) as w:
             resp = self._parse_response(await w.text())
 
-        if resp["completion"] == "OK":
-            self._update(resp)
-            return self.question
-        else:
+        if resp["completion"] != "OK":
             return raise_connection_error(resp["completion"])
+        self._update(resp)
+        return self.question
 
     async def back(self):
         """(coroutine)
@@ -216,11 +210,10 @@ class Akinator():
         async with self.client_session.get(BACK_URL.format(self.server, self.timestamp, str(self.child_mode).lower(), self.session, self.signature, self.step, self.question_filter), headers=HEADERS) as w:
             resp = self._parse_response(await w.text())
 
-        if resp["completion"] == "OK":
-            self._update(resp)
-            return self.question
-        else:
+        if resp["completion"] != "OK":
             return raise_connection_error(resp["completion"])
+        self._update(resp)
+        return self.question
 
     async def win(self):
         """(coroutine)
@@ -235,12 +228,11 @@ class Akinator():
         async with self.client_session.get(WIN_URL.format(self.server, self.timestamp, str(self.child_mode).lower(), self.session, self.signature, self.step), headers=HEADERS) as w:
             resp = self._parse_response(await w.text())
 
-        if resp["completion"] == "OK":
-            self.first_guess = resp["parameters"]["elements"][0]["element"]
-            self.guesses = [g["element"] for g in resp["parameters"]["elements"]]
-            return self.first_guess
-        else:
+        if resp["completion"] != "OK":
             return raise_connection_error(resp["completion"])
+        self.first_guess = resp["parameters"]["elements"][0]["element"]
+        self.guesses = [g["element"] for g in resp["parameters"]["elements"]]
+        return self.first_guess
 
     async def close(self):
         """(coroutine)
